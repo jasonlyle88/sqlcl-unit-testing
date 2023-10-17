@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ora="http://www.oracle.com/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.17.xsd"
+>
+    <property
+        name='testproperty'
+        value='no'
+        context="notreal"
+    />
+
+    <property
+        name='testproperty'
+        value='yes'
+    />
+
+    <changeSet
+        id="context-filtering-property"
+        author="jlyle"
+    >
+        <sql endDelimiter="/">
+            begin
+                if '${testproperty}' = 'no' then
+                    raise_application_error(-20001, 'Property not filtered by context');
+                end if;
+            end;
+        </sql>
+    </changeSet>
+</databaseChangeLog>
