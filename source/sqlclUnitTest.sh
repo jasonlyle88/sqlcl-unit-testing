@@ -456,7 +456,7 @@ EOF
     ############################################################################
     printf -- '%s\n' "${h1}"
     printf -- '%s\n' "${h1}"
-    printf -- '%s %s\n' "${hs}" 'SQLcl Liquibase Unit Testing'
+    printf -- '%s %s\n' "${hs}" 'SQLcl Unit Testing'
     printf -- '%s\n' "${h1}"
     printf -- '%s\n' "${h1}"
 
