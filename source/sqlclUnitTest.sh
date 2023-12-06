@@ -579,6 +579,8 @@ EOF
             printf -- 'Executing test in background: "%s"\n' "${testName}"
 
             executeUnitTest "${testType}" "${testFile}" &
+
+            sleep 1
         done < <( find "${testsDirectory}" -type 'f' -mindepth '1' -maxdepth '1' | sort )
     done
 
