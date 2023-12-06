@@ -456,7 +456,7 @@ EOF
     ############################################################################
     printf -- '%s\n' "${h1}"
     printf -- '%s\n' "${h1}"
-    printf -- '%s %s\n' "${hs}" 'SQLcl Liquibase Unit Testing'
+    printf -- '%s %s\n' "${hs}" 'SQLcl Unit Testing'
     printf -- '%s\n' "${h1}"
     printf -- '%s\n' "${h1}"
 
@@ -579,6 +579,8 @@ EOF
             printf -- 'Executing test in background: "%s"\n' "${testName}"
 
             executeUnitTest "${testType}" "${testFile}" &
+
+            sleep 1
         done < <( find "${testsDirectory}" -type 'f' -mindepth '1' -maxdepth '1' | sort )
     done
 
