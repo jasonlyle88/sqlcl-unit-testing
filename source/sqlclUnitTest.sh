@@ -171,6 +171,8 @@ function main() {
         testName="${testFilename%.*}"
         testResultCode=-1
 
+        cd "${testDirectory}" || return 1
+
         # Make sure SQLPATH is not set for SQLcl execution so no login.sql
         # script is runs
         export SQLPATH=""
