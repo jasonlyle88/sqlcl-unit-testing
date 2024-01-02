@@ -329,6 +329,8 @@ EOF
     ##  Procedural variables
     ############################################################################
     local workingDirectory
+    local sqlWheneverErrorTest
+    local liquibaseWehenverErrorTest
     local directTestResultFile
     local wrappedTestResultFile
     local liquibaseTestResultFile
@@ -534,13 +536,82 @@ EOF
 
     printf -- 'Database connection test successful!\n'
 
+    # Setup temporary directory
+    workingDirectory="$(mktemp -d)"
+
+    printf -- '\n'
+    printf -- '%s\n' "${h1}"
+    printf -- '%s %s\n' "${hs}" 'Check SQL error exits SQLcl'
+    printf -- '%s\n' "${h1}"
+
+    # Setup testfiles to check `whenever sqlerror exit failure` and liquibase
+    sqlWheneverErrorTest="${workingDirectory}/wheneverError.sql"
+    liquibaseWehenverErrorTest="${workingDirectory}/wheneverError.xml"
+    touch "${sqlWheneverErrorTest}"
+    touch "${liquibaseWehenverErrorTest}"
+
+    {
+        printf -- 'whenever sqlerror exit failure\n'
+        printf -- 'exec raise_application_error(-20001, '\''Cause exit'\'')\n'
+        printf -- 'exit'
+    } > "${sqlWheneverErrorTest}"
+
+    if "${sqlclBinary}" -S -L -noupdates "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>/dev/null 2>&1; then
+        printf -- 'ERROR: SQLcl not exiting appropriately on SQL error\n' >&2
+        return 26
+    fi
+
+    printf -- 'SQL error exits SQLcl test successful!\n'
+
+    printf -- '\n'
+    printf -- '%s\n' "${h1}"
+    printf -- '%s %s\n' "${hs}" 'Check Liquibase error exits SQLcl'
+    printf -- '%s\n' "${h1}"
+
+    {
+        printf -- 'whenever sqlerror exit failure\n'
+        printf -- 'liquibase update -search-path %s -changelog-file %s\n' "${workingDirectory}" "$(basename "${liquibaseWehenverErrorTest}")"
+        printf -- 'exit'
+    } > "${sqlWheneverErrorTest}"
+
+    {
+        printf -- '<?xml version="1.0" encoding="UTF-8"?>\n'
+        printf -- '<databaseChangeLog\n'
+        printf -- '    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"\n'
+        printf -- '    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\n'
+        printf -- '    xmlns:ora="http://www.oracle.com/xml/ns/dbchangelog-ext"\n'
+        printf -- '    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.17.xsd"\n'
+        printf -- '>\n'
+        printf -- '    <changeSet\n'
+        printf -- '        id="throw_error"\n'
+        printf -- '        author="jlyle"\n'
+        printf -- '        runOnChange="true"\n'
+        printf -- '        runAlways="true"\n'
+        printf -- '    >\n'
+        printf -- '        <sql endDelimiter="/">\n'
+        printf -- '            begin\n'
+        printf -- '                null;\n'
+        printf -- '                raise_application_error(-20001, '\''Cause exit'\'');\n'
+        printf -- '            end;\n'
+        printf -- '            /\n'
+        printf -- '        </sql>\n'
+        printf -- '    </changeSet>\n'
+        printf -- '</databaseChangeLog>\n'
+    } > "${liquibaseWehenverErrorTest}"
+
+    if "${sqlclBinary}" -S -L -noupdates "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>/dev/null 2>&1; then
+        printf -- 'ERROR: SQLcl not exiting appropriately on Liquibase error\n' >&2
+        return 27
+    fi
+
+    printf -- 'Liquibase error exits SQLcl test successful!\n'
+
     printf -- '\n'
     printf -- '%s\n' "${h1}"
     printf -- '%s %s\n' "${hs}" 'Run unit tests'
     printf -- '%s\n' "${h1}"
 
-    # Setup temporary directory
-    workingDirectory="$(mktemp -d)"
+    # Setup unit test result files
     directTestResultFile="${workingDirectory}/directResults.txt"
     wrappedTestResultFile="${workingDirectory}/wrappedResults.txt"
     liquibaseTestResultFile="${workingDirectory}/liquibaseResults.txt"
@@ -634,7 +705,7 @@ EOF
             testResultCodes+=("${testResultCode}")
             testResultPlainStrings+=("${testResultPlainString}")
             testResultColorizedStrings+=("${testResultColorizedString}")
-        done < <( cat "${testResultFile}" | sort )
+        done < <( sort < "${testResultFile}" )
     done
 
     # Remove all working files
