@@ -634,7 +634,7 @@ EOF
             testResultCodes+=("${testResultCode}")
             testResultPlainStrings+=("${testResultPlainString}")
             testResultColorizedStrings+=("${testResultColorizedString}")
-        done < <( cat "${testResultFile}" | sort )
+        done < <( sort < "${testResultFile}" )
     done
 
     # Remove all working files
