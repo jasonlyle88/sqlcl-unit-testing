@@ -541,7 +541,7 @@ EOF
 
     printf -- '\n'
     printf -- '%s\n' "${h1}"
-    printf -- '%s %s\n' "${hs}" 'Check SQLCL Liquibase error exits SQLcl'
+    printf -- '%s %s\n' "${hs}" 'Check SQL error exits SQLcl'
     printf -- '%s\n' "${h1}"
 
     # Setup testfiles to check `whenever sqlerror exit failure` and liquibase
@@ -552,10 +552,24 @@ EOF
 
     {
         printf -- 'whenever sqlerror exit failure\n'
-        printf -- 'set serveroutput on size unlimited\n'
-        printf -- 'set verify on\n'
-        printf -- 'set echo on\n'
-        printf -- '\n'
+        printf -- 'exec raise_application_error(-20001, '\''Cause exit'\'')\n'
+        printf -- 'exit'
+    } > "${sqlWheneverErrorTest}"
+
+    if "${sqlclBinary}" -S -L -noupdates "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>/dev/null 2>&1; then
+        printf -- 'ERROR: SQLcl not exiting appropriately on SQL error\n' >&2
+        return 26
+    fi
+
+    printf -- 'SQL error exits SQLcl test successful!\n'
+
+    printf -- '\n'
+    printf -- '%s\n' "${h1}"
+    printf -- '%s %s\n' "${hs}" 'Check Liquibase error exits SQLcl'
+    printf -- '%s\n' "${h1}"
+
+    {
+        printf -- 'whenever sqlerror exit failure\n'
         printf -- 'liquibase update -search-path %s -changelog-file %s\n' "${workingDirectory}" "$(basename "${liquibaseWehenverErrorTest}")"
         printf -- 'exit'
     } > "${sqlWheneverErrorTest}"
@@ -586,11 +600,11 @@ EOF
     } > "${liquibaseWehenverErrorTest}"
 
     if "${sqlclBinary}" -S -L -noupdates "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>/dev/null 2>&1; then
-        printf -- 'ERROR: SQLcl not exiting appropriately when Liquibase fails\n' >&2
-        return 26
+        printf -- 'ERROR: SQLcl not exiting appropriately on Liquibase error\n' >&2
+        return 27
     fi
 
-    printf -- 'SQLCL Liquibase error exits SQLcl test successful!\n'
+    printf -- 'Liquibase error exits SQLcl test successful!\n'
 
     printf -- '\n'
     printf -- '%s\n' "${h1}"
