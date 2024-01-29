@@ -184,7 +184,7 @@ function main() {
             mkdir -p "$(dirname "${logFile}")"
             touch "${logFile}"
 
-            "${sqlclBinary}" -L "${sqlclConnectStringWithoutPassword}" 1>"${logFile}" 2>&1 <<- EOF
+            "${sqlclBinary}" -L -noupdates "${sqlclConnectStringWithoutPassword}" 1>"${logFile}" 2>&1 <<- EOF
 ${databasePassword}
 whenever sqlerror exit failure
 set serveroutput on size unlimited
@@ -194,16 +194,6 @@ set echo on
 EOF
             testResultCode=$?
 
-            # Special case handling
-            if
-                [[ "${testName}" = 'sqlcl-liquibase-do-not-prompt-password' ]] && \
-                [[ "${testResultCode}" -eq 0 ]]
-            then
-                count="$(grep -c 'Password?' "${logFile}")"
-                if [[ "${count}" -gt 1 ]]; then
-                    testResultCode=2
-                fi
-            fi
         elif [[ "${testType}" = "${testTypeSqlclWrapped}" ]]; then
             resultFile="${wrappedTestResultFile}"
             logFile="${logDirectory}/wrapped/${testName}.log"
@@ -221,7 +211,7 @@ EOF
                 printf -- '@ "%s" "%s"' "${testFile}" "${testDirectory}"
             } > "${wrapperFile}"
 
-            "${sqlclBinary}" /nolog "@${wrapperFile}" 1>"${logFile}" 2>&1
+            "${sqlclBinary}" -noupdates /nolog "@${wrapperFile}" 1>"${logFile}" 2>&1
             testResultCode=$?
 
             rm "${wrapperFile}"
@@ -235,7 +225,7 @@ EOF
             mkdir -p "$(dirname "${logFile}")"
             touch "${logFile}"
 
-            "${sqlclBinary}" -L "${sqlclConnectStringWithPassword}" 1>"${logFile}" 2>&1 <<- EOF
+            "${sqlclBinary}" -L -noupdates "${sqlclConnectStringWithPassword}" 1>"${logFile}" 2>&1 <<- EOF
 whenever sqlerror exit failure
 set serveroutput on size unlimited
 set verify on
@@ -244,7 +234,7 @@ liquibase update -contexts test_context -database-changelog-table-name ${databas
 EOF
             testResultCode=$?
 
-            "${sqlclBinary}" -L "${sqlclConnectStringWithPassword}" 1>/dev/null 2>&1 <<- EOF
+            "${sqlclBinary}" -L -noupdates "${sqlclConnectStringWithPassword}" 1>/dev/null 2>&1 <<- EOF
 drop view ${databaseChangelogTableName}_DETAILS;
 drop table ${databaseChangelogTableName}_ACTIONS;
 drop table ${databaseChangelogTableName};
