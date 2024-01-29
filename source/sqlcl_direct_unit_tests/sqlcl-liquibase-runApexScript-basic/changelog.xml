@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ora="http://www.oracle.com/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.17.xsd"
+>
+    <changeSet
+        id="basic"
+        author="jlyle"
+        runOnChange="true"
+        runAlways="true"
+    >
+        <ora:runApexScript ownerName="test" sourceType="FILE" objectType="SCRIPT" objectName="basic" relativeToChangelogFile="true" >
+            <ora:source>
+                script.sql
+            </ora:source>
+        </ora:runApexScript>
+    </changeSet>
+</databaseChangeLog>
