@@ -350,6 +350,7 @@ EOF
     local tableWidth
     local tableFormat
     local resultSeparatorCount
+    local overallTestResultCode
 
     local colorSupport
     local textReset
@@ -739,6 +740,8 @@ EOF
 
     tableFormat="| %-${longestTestTypeLength}s | %-${longestTestNameLength}s | %s\n"
 
+    overallTestResultCode=0
+
     # Print out the results table
     printf -- '\n'
     printf -- "%0.s-" $(seq 1 ${tableWidth})
@@ -757,6 +760,10 @@ EOF
         testResultPlainString="${testResultPlainStrings[${index}]}"
         testResultColorizedString="${testResultColorizedStrings[${index}]}"
 
+        if [[ "${testResultCode}" -gt 0 ]]; then
+            overallTestResultCode=1
+        fi
+
         printf -- \
             "${tableFormat}" \
             "${testType}" \
@@ -765,6 +772,8 @@ EOF
     done
     printf -- "%0.s-" $(seq 1 ${tableWidth})
     printf -- '\n'
+
+    return "${overallTestResultCode}"
 } # main
 
 main "$@"
