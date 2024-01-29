@@ -331,6 +331,7 @@ EOF
     local headerText
     local testsDirectory
     local testFile
+    local testExtension
     local testFilename
     local testType
     local testName
@@ -618,14 +619,17 @@ EOF
             headerText='SQLcl (direct) unit tests'
             testType="${testTypeSqlclDirect}"
             testsDirectory="${sqlclDirectTestsDirectory}"
+            testExtension='*.sql'
         elif [[ "$index" -eq 2 ]]; then
             headerText='SQLcl (wrapped) unit tests'
             testType="${testTypeSqlclWrapped}"
             testsDirectory="${sqlclWrappedTestsDirectory}"
+            testExtension='*.sql'
         elif [[ "$index" -eq 3 ]]; then
             headerText='SQLcl Liquibase unit tests'
             testType="${testTypeSqlclLiquibase}"
             testsDirectory="${liquibaseTestsDirectory}"
+            testExtension='*.xml'
         fi
 
         printf -- '\n'
@@ -644,7 +648,7 @@ EOF
             executeUnitTest "${testType}" "${testFile}" &
 
             sleep 1
-        done < <( find "${testsDirectory}" -type 'f' -mindepth '1' -maxdepth '1' | sort )
+        done < <( find "${testsDirectory}" -type 'f' -iname "${testExtension}" -mindepth '1' -maxdepth '1' | sort )
     done
 
     ##
