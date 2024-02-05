@@ -503,6 +503,12 @@ EOF
 
     printf -- '\n'
     printf -- '%s\n' "${h1}"
+    printf -- '%s %s\n' "${hs}" 'SQLcl Version'
+    printf -- '%s\n' "${h1}"
+    "${sqlclBinary}" -V
+
+    printf -- '\n'
+    printf -- '%s\n' "${h1}"
     printf -- '%s %s\n' "${hs}" 'Check database connection'
     printf -- '%s\n' "${h1}"
     printf -- '%s %s: "%s"\n' "${hs}" 'Username          ' "${databaseUsername}"

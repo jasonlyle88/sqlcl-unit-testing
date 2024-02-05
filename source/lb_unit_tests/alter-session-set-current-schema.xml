@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ora="http://www.oracle.com/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.17.xsd"
+>
+    <changeSet
+        id="create_schema"
+        author="jlyle"
+        runOnChange="true"
+        runAlways="true"
+    >
+    <preConditions onFail="MARK_RAN">
+        <sqlCheck expectedResult="0">
+            select count(1)
+            from all_users
+            where username = 'FOOBAR';
+        </sqlCheck>
+    </preConditions>
+    <sql>
+        create user foobar no authentication;
+        grant connect to foobar;
+        grant create session to foobar;
+    </sql>
+    </changeSet>
+
+    <changeSet
+        id="set_current_schema_to_foobar"
+        author="jlyle"
+        runOnChange="true"
+        runAlways="true"
+    >
+        <sql>
+            alter session set current_schema = foobar;
+        </sql>
+        <rollback></rollback>
+    </changeSet>
+
+    <changeSet
+        id="dummy_changeset"
+        author="jlyle"
+        runOnChange="true"
+        runAlways="true"
+    >
+        <output>Test</output>
+    </changeSet>
+
+    <changeSet
+        id="set_current_schema_to_session_user"
+        author="jlyle"
+        runOnChange="true"
+        runAlways="true"
+        >
+        <sql endDelimiter="/">
+            begin
+                execute immediate 'alter session set current_schema = ' || sys_context('userenv', 'session_user');
+            end;
+            /
+        </sql>
+        <rollback></rollback>
+    </changeSet>
+</databaseChangeLog>
