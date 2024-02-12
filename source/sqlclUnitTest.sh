@@ -568,7 +568,7 @@ EOF
 
     {
         printf -- 'whenever sqlerror exit failure\n'
-        printf -- 'liquibase update -search-path %s -changelog-file %s\n' "${workingDirectory}" "$(basename "${liquibaseWehenverErrorTest}")"
+        printf -- 'liquibase update -changelog-file %s\n' "$(basename "${liquibaseWehenverErrorTest}")"
         printf -- 'exit'
     } > "${sqlWheneverErrorTest}"
 
@@ -597,10 +597,14 @@ EOF
         printf -- '</databaseChangeLog>\n'
     } > "${liquibaseWehenverErrorTest}"
 
+    cd "${workingDirectory}" || return 1
     if "${sqlclBinary}" -S -L -noupdates "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>/dev/null 2>&1; then
+        cd "${originalPWD}" || return 1
         printf -- 'ERROR: SQLcl not exiting appropriately on Liquibase error\n' >&2
         return 27
     fi
+    cd "${originalPWD}" || return 1
+
 
     printf -- 'Liquibase error exits SQLcl test successful!\n'
 
