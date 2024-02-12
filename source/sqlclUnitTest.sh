@@ -325,6 +325,7 @@ EOF
     local wrappedTestResultFile
     local liquibaseTestResultFile
     local logDirectory
+    local logMainFile
     local sqlclConnectStringWithoutPassword
     local sqlclConnectStringWithPassword
     local index
@@ -450,23 +451,29 @@ EOF
     # Function Logic
     #
     ############################################################################
-    printf -- '%s\n' "${h1}"
-    printf -- '%s\n' "${h1}"
-    printf -- '%s %s\n' "${hs}" 'SQLcl Unit Testing'
-    printf -- '%s\n' "${h1}"
-    printf -- '%s\n' "${h1}"
+    # Setup log directory
+    logDirectory="${originalPWD}/sqlclUnitTestResults_$(date +%Y%m%d_%H%M%S)"
+    logMainFile="${logDirectory}/execution.log"
+    mkdir "${logDirectory}"
+    touch "${logMainFile}"
+
+    printf -- '%s\n' "${h1}" | tee "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+    printf -- '%s %s\n' "${hs}" 'SQLcl Unit Testing' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
 
     ##
     ##  Check for required parameters
     ##
 
     if [[ "${uFlag}" != 'true' ]]; then
-        printf -- 'ERROR: Database username (-u) must be specified.\n' >&2
+        printf -- 'ERROR: Database username (-u) must be specified.\n' | tee -a "${logMainFile}" >&2
         return 11
     fi
 
     if [[ "${cFlag}" != 'true' ]]; then
-        printf -- 'ERROR: Database connect identifier (-c) must be specified.\n' >&2
+        printf -- 'ERROR: Database connect identifier (-c) must be specified.\n' | tee -a "${logMainFile}" >&2
         return 12
     fi
 
@@ -475,22 +482,22 @@ EOF
     ##
 
     if ! command -v "${sqlclBinary}" 1>/dev/null 2>&1; then
-        printf -- 'ERROR: Invalid SQLcl binary: "%s"\n' "${sqlclBinary}" >&2
+        printf -- 'ERROR: Invalid SQLcl binary: "%s"\n' "${sqlclBinary}" | tee -a "${logMainFile}" >&2
         return 13
     fi
 
     if [[ ! -d "${sqlclDirectTestsDirectory}" ]]; then
-        printf -- 'ERROR: SQLcl (direct) unit testing directory is not a directory: "%s"\n' "${sqlclDirectTestsDirectory}" >&2
+        printf -- 'ERROR: SQLcl (direct) unit testing directory is not a directory: "%s"\n' "${sqlclDirectTestsDirectory}" | tee -a "${logMainFile}" >&2
         return 14
     fi
 
     if [[ ! -d "${sqlclWrappedTestsDirectory}" ]]; then
-        printf -- 'ERROR: SQLcl (wrapped) unit testing directory is not a directory: "%s"\n' "${sqlclWrappedTestsDirectory}" >&2
+        printf -- 'ERROR: SQLcl (wrapped) unit testing directory is not a directory: "%s"\n' "${sqlclWrappedTestsDirectory}" | tee -a "${logMainFile}" >&2
         return 15
     fi
 
     if [[ ! -d "${liquibaseTestsDirectory}" ]]; then
-        printf -- 'ERROR: SQLcl Liquibase unit testing directory is not a directory: "%s"\n' "${liquibaseTestsDirectory}" >&2
+        printf -- 'ERROR: SQLcl Liquibase unit testing directory is not a directory: "%s"\n' "${liquibaseTestsDirectory}" | tee -a "${logMainFile}" >&2
         return 16
     fi
 
@@ -501,46 +508,46 @@ EOF
     sqlclWrappedTestsDirectory="$(getCanonicalPath "${sqlclWrappedTestsDirectory}")"
     liquibaseTestsDirectory="$(getCanonicalPath "${liquibaseTestsDirectory}")"
 
-    printf -- '\n'
-    printf -- '%s\n' "${h1}"
-    printf -- '%s %s\n' "${hs}" 'SQLcl Version'
-    printf -- '%s\n' "${h1}"
-    "${sqlclBinary}" -V
+    printf -- '\n' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+    printf -- '%s %s\n' "${hs}" 'SQLcl Version' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+    "${sqlclBinary}" -V | tee -a "${logMainFile}"
 
-    printf -- '\n'
-    printf -- '%s\n' "${h1}"
-    printf -- '%s %s\n' "${hs}" 'Check database connection'
-    printf -- '%s\n' "${h1}"
-    printf -- '%s %s: "%s"\n' "${hs}" 'Username          ' "${databaseUsername}"
-    printf -- '%s %s: "%s"\n' "${hs}" 'Connect Identifier' "${databaseConnectIdentifier}"
-    printf -- '%s\n' "${h1}"
+    printf -- '\n' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+    printf -- '%s %s\n' "${hs}" 'Check database connection' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+    printf -- '%s %s: "%s"\n' "${hs}" 'Username          ' "${databaseUsername}" | tee -a "${logMainFile}"
+    printf -- '%s %s: "%s"\n' "${hs}" 'Connect Identifier' "${databaseConnectIdentifier}" | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
 
     # Prompt for database password
     if [[ "${pFlag}" != 'true' ]]; then
-        printf -- 'No password was provided. Prompting for password...\n'
-        printf -- 'Database password: '
+        printf -- 'No password was provided. Prompting for password...\n' | tee -a "${logMainFile}"
+        printf -- 'Database password: ' | tee -a "${logMainFile}"
         read -rs databasePassword
 
-        printf -- '\n'
+        printf -- '\n' | tee -a "${logMainFile}"
     fi
 
     sqlclConnectStringWithoutPassword="${databaseUsername}@'${databaseConnectIdentifier}'"
     sqlclConnectStringWithPassword="${databaseUsername}/${databasePassword}@'${databaseConnectIdentifier}'"
 
-    if ! "${sqlclBinary}" -S -L -noupdates "${sqlclConnectStringWithPassword}" 1>/dev/null 2>&1 <<< 'exit'; then
-        printf -- 'ERROR: Could not connect to database\n' >&2
+    if ! "${sqlclBinary}" -S -L -noupdates "${sqlclConnectStringWithPassword}" 1>>"${logMainFile}" 2>&1 <<< 'exit'; then
+        printf -- 'ERROR: Could not connect to database\n' | tee -a "${logMainFile}" >&2
         return 25
     fi
 
-    printf -- 'Database connection test successful!\n'
+    printf -- 'Database connection test successful!\n' | tee -a "${logMainFile}"
 
     # Setup temporary directory
     workingDirectory="$(mktemp -d)"
 
-    printf -- '\n'
-    printf -- '%s\n' "${h1}"
-    printf -- '%s %s\n' "${hs}" 'Check SQL error exits SQLcl'
-    printf -- '%s\n' "${h1}"
+    printf -- '\n' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+    printf -- '%s %s\n' "${hs}" 'Check SQL error exits SQLcl' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
 
     # Setup testfiles to check `whenever sqlerror exit failure` and liquibase
     sqlWheneverErrorTest="${workingDirectory}/wheneverError.sql"
@@ -554,17 +561,17 @@ EOF
         printf -- 'exit'
     } > "${sqlWheneverErrorTest}"
 
-    if "${sqlclBinary}" -S -L -noupdates "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>/dev/null 2>&1; then
-        printf -- 'ERROR: SQLcl not exiting appropriately on SQL error\n' >&2
+    if "${sqlclBinary}" -S -L -noupdates "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>>"${logMainFile}" 2>&1; then
+        printf -- 'ERROR: SQLcl not exiting appropriately on SQL error\n' | tee -a "${logMainFile}" >&2
         return 26
     fi
 
-    printf -- 'SQL error exits SQLcl test successful!\n'
+    printf -- 'SQL error exits SQLcl test successful!\n' | tee -a "${logMainFile}"
 
-    printf -- '\n'
-    printf -- '%s\n' "${h1}"
-    printf -- '%s %s\n' "${hs}" 'Check Liquibase error exits SQLcl'
-    printf -- '%s\n' "${h1}"
+    printf -- '\n' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+    printf -- '%s %s\n' "${hs}" 'Check Liquibase error exits SQLcl' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
 
     {
         printf -- 'whenever sqlerror exit failure\n'
@@ -598,20 +605,20 @@ EOF
     } > "${liquibaseWehenverErrorTest}"
 
     cd "${workingDirectory}" || return 1
-    if "${sqlclBinary}" -S -L -noupdates "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>/dev/null 2>&1; then
+    if "${sqlclBinary}" -S -L -noupdates "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>>"${logMainFile}" 2>&1; then
         cd "${originalPWD}" || return 1
-        printf -- 'ERROR: SQLcl not exiting appropriately on Liquibase error\n' >&2
+        printf -- 'ERROR: SQLcl not exiting appropriately on Liquibase error\n' | tee -a "${logMainFile}" >&2
         return 27
     fi
     cd "${originalPWD}" || return 1
 
 
-    printf -- 'Liquibase error exits SQLcl test successful!\n'
+    printf -- 'Liquibase error exits SQLcl test successful!\n' | tee -a "${logMainFile}"
 
-    printf -- '\n'
-    printf -- '%s\n' "${h1}"
-    printf -- '%s %s\n' "${hs}" 'Run unit tests'
-    printf -- '%s\n' "${h1}"
+    printf -- '\n' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+    printf -- '%s %s\n' "${hs}" 'Run unit tests' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
 
     # Setup unit test result files
     directTestResultFile="${workingDirectory}/directResults.txt"
@@ -620,10 +627,6 @@ EOF
     touch "${directTestResultFile}"
     touch "${wrappedTestResultFile}"
     touch "${liquibaseTestResultFile}"
-
-    # Setup log directory
-    logDirectory="${originalPWD}/sqlclUnitTestResults_$(date +%Y%m%d_%H%M%S)"
-    mkdir "${logDirectory}"
 
     for index in {1..3}; do
         if [[ "$index" -eq 1 ]]; then
@@ -643,18 +646,18 @@ EOF
             testExtension='*.xml'
         fi
 
-        printf -- '\n'
-        printf -- '%s\n' "${h2}"
-        printf -- '%s %s\n' "${hs}" "${headerText}"
-        printf -- '%s\n' "${h2}"
-        printf -- '%s\n' "${testsDirectory}"
-        printf -- '\n'
+        printf -- '\n' | tee -a "${logMainFile}"
+        printf -- '%s\n' "${h2}" | tee -a "${logMainFile}"
+        printf -- '%s %s\n' "${hs}" "${headerText}" | tee -a "${logMainFile}"
+        printf -- '%s\n' "${h2}" | tee -a "${logMainFile}"
+        printf -- '%s\n' "${testsDirectory}" | tee -a "${logMainFile}"
+        printf -- '\n' | tee -a "${logMainFile}"
 
         while IFS= read -r testFile; do
             testFilename="$(basename "${testFile}")"
             testName="${testFilename%.*}"
 
-            printf -- 'Executing test in background: "%s"\n' "${testName}"
+            printf -- 'Executing test in background: "%s"\n' "${testName}" | tee -a "${logMainFile}"
 
             executeUnitTest "${testType}" "${testFile}" &
 
@@ -666,24 +669,24 @@ EOF
     ## Wait for unit test execution to finish
     ##
 
-    printf -- '\n'
-    printf -- '%s\n' "${h1}"
-    printf -- '%s %s\n' "${hs}" 'Wait for unit test execution to finish'
-    printf -- '%s\n' "${h1}"
+    printf -- '\n' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+    printf -- '%s %s\n' "${hs}" 'Wait for unit test execution to finish' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
 
     # Wait for all background executions of unit tests to complete
     wait
 
-    printf -- 'Unit tests finished running.\n'
+    printf -- 'Unit tests finished running.\n' | tee -a "${logMainFile}"
 
     ##
     ## Gather unit test results
     ##
 
-    printf -- '\n'
-    printf -- '%s\n' "${h1}"
-    printf -- '%s %s\n' "${hs}" 'Gather unit test results'
-    printf -- '%s\n' "${h1}"
+    printf -- '\n' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+    printf -- '%s %s\n' "${hs}" 'Gather unit test results' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
 
     for index in {1..3}; do
         if [[ "$index" -eq 1 ]]; then
@@ -716,12 +719,12 @@ EOF
     # Remove all working files
     rm -rf "${workingDirectory}"
 
-    printf -- 'Finished gathering unit test results.\n'
+    printf -- 'Finished gathering unit test results.\n' | tee -a "${logMainFile}"
 
-    printf -- '\n'
-    printf -- '%s\n' "${h1}"
-    printf -- '%s %s\n' "${hs}" 'Unit test results'
-    printf -- '%s\n' "${h1}"
+    printf -- '\n' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+    printf -- '%s %s\n' "${hs}" 'Unit test results' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
 
     # Calculate longest test type length
     longestTestTypeLength=${#testTypeSummaryHeader}
@@ -753,16 +756,16 @@ EOF
     overallTestResultCode=0
 
     # Print out the results table
-    printf -- '\n'
-    printf -- "%0.s-" $(seq 1 ${tableWidth})
-    printf -- '\n'
+    printf -- '\n' | tee -a "${logMainFile}"
+    printf -- "%0.s-" $(seq 1 ${tableWidth}) | tee -a "${logMainFile}"
+    printf -- '\n' | tee -a "${logMainFile}"
     printf -- \
         "${tableFormat}" \
         "${testTypeSummaryHeader}" \
         "${testNameSummaryHeader}" \
-        "${testResultSummaryHeader}"
-    printf -- "%0.s-" $(seq 1 ${tableWidth})
-    printf -- '\n'
+        "${testResultSummaryHeader}"  | tee -a "${logMainFile}"
+    printf -- "%0.s-" $(seq 1 ${tableWidth}) | tee -a "${logMainFile}"
+    printf -- '\n' | tee -a "${logMainFile}"
     for index in "${!testNames[@]}"; do
         testType="${testTypes[${index}]}"
         testName="${testNames[${index}]}"
@@ -779,9 +782,14 @@ EOF
             "${testType}" \
             "${testName}" \
             "${testResultColorizedString}"
+        printf -- \
+            "${tableFormat}" \
+            "${testType}" \
+            "${testName}" \
+            "${testResultPlainString}" >> "${logMainFile}"
     done
-    printf -- "%0.s-" $(seq 1 ${tableWidth})
-    printf -- '\n'
+    printf -- "%0.s-" $(seq 1 ${tableWidth}) | tee -a "${logMainFile}"
+    printf -- '\n' | tee -a "${logMainFile}"
 
     return "${overallTestResultCode}"
 } # main
