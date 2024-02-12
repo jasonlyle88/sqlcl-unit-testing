@@ -5,7 +5,7 @@ begin
         where table_name = 'DATABASECHANGELOG'
     )
     loop
-        execute immediate 'trucate table databasechangelog';
+        execute immediate 'truncate table databasechangelog';
     end loop;
 end;
 /
