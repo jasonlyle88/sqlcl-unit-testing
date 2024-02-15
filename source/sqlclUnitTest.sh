@@ -215,8 +215,35 @@ EOF
             testResultCode=$?
 
             rm "${wrapperFile}"
-        elif [[ "${testType}" = "${testTypeSqlclLiquibase}" ]]; then
-            resultFile="${liquibaseTestResultFile}"
+        elif [[ "${testType}" = "${testTypeSqlclLiquibaseCurrentDirectory}" ]]; then
+            resultFile="${liquibaseCurrentDirectoryTestResultFile}"
+            logFile="${logDirectory}/liquibase/${testName}.log"
+
+            # Make sure database changelog table name is unique
+            databaseChangelogTableName="ut${RANDOM}$(date +%s)"
+
+            mkdir -p "$(dirname "${logFile}")"
+            touch "${logFile}"
+
+            cd "${testDirectory}" || return 1
+
+            "${sqlclBinary}" -L -noupdates "${sqlclConnectStringWithPassword}" 1>"${logFile}" 2>&1 <<- EOF
+whenever sqlerror exit failure
+set serveroutput on size unlimited
+set verify on
+set echo on
+liquibase update -contexts test_context -database-changelog-table-name ${databaseChangelogTableName} -changelog-file ${testFilename}
+EOF
+            testResultCode=$?
+
+            "${sqlclBinary}" -L -noupdates "${sqlclConnectStringWithPassword}" 1>/dev/null 2>&1 <<- EOF
+drop view ${databaseChangelogTableName}_DETAILS;
+drop table ${databaseChangelogTableName}_ACTIONS;
+drop table ${databaseChangelogTableName};
+drop table ${databaseChangelogTableName}LOCK;
+EOF
+        elif [[ "${testType}" = "${testTypeSqlclLiquibaseSearchPath}" ]]; then
+            resultFile="${liquibaseSearchPathTestResultFile}"
             logFile="${logDirectory}/liquibase/${testName}.log"
 
             # Make sure database changelog table name is unique
@@ -256,7 +283,8 @@ EOF
     ############################################################################
     local testTypeSqlclDirect='SQLcl (direct)'
     local testTypeSqlclWrapped='SQLcl (wrapped)'
-    local testTypeSqlclLiquibase='SQLcl Liquibase'
+    local testTypeSqlclLiquibaseCurrentDirectory='SQLcl Liquibase (current directory)'
+    local testTypeSqlclLiquibaseSearchPath='SQLcl Liquibase (-search-path)'
     local testSuccessText='Succeeded'
     local textFailedText='Failed'
     local testTypeSummaryHeader='Test Type'
@@ -323,7 +351,8 @@ EOF
     local liquibaseWehenverErrorTest
     local directTestResultFile
     local wrappedTestResultFile
-    local liquibaseTestResultFile
+    local liquibaseCurrentDirectoryTestResultFile
+    local liquibaseSearchPathTestResultFile
     local logDirectory
     local logMainFile
     local sqlclConnectStringWithoutPassword
@@ -623,12 +652,14 @@ EOF
     # Setup unit test result files
     directTestResultFile="${workingDirectory}/directResults.txt"
     wrappedTestResultFile="${workingDirectory}/wrappedResults.txt"
-    liquibaseTestResultFile="${workingDirectory}/liquibaseResults.txt"
+    liquibaseCurrentDirectoryTestResultFile="${workingDirectory}/liquibaseCurrentDirectoryResults.txt"
+    liquibaseSearchPathTestResultFile="${workingDirectory}/liquibaseSearchPathResults.txt"
     touch "${directTestResultFile}"
     touch "${wrappedTestResultFile}"
-    touch "${liquibaseTestResultFile}"
+    touch "${liquibaseCurrentDirectoryTestResultFile}"
+    touch "${liquibaseSearchPathTestResultFile}"
 
-    for index in {1..3}; do
+    for index in {1..4}; do
         if [[ "$index" -eq 1 ]]; then
             headerText='SQLcl (direct) unit tests'
             testType="${testTypeSqlclDirect}"
@@ -640,8 +671,13 @@ EOF
             testsDirectory="${sqlclWrappedTestsDirectory}"
             testExtension='*.sql'
         elif [[ "$index" -eq 3 ]]; then
-            headerText='SQLcl Liquibase unit tests'
-            testType="${testTypeSqlclLiquibase}"
+            headerText='SQLcl Liquibase unit tests (current directory)'
+            testType="${testTypeSqlclLiquibaseCurrentDirectory}"
+            testsDirectory="${liquibaseTestsDirectory}"
+            testExtension='*.xml'
+        elif [[ "$index" -eq 4 ]]; then
+            headerText='SQLcl Liquibase unit tests (-search-path)'
+            testType="${testTypeSqlclLiquibaseSearchPath}"
             testsDirectory="${liquibaseTestsDirectory}"
             testExtension='*.xml'
         fi
@@ -688,7 +724,7 @@ EOF
     printf -- '%s %s\n' "${hs}" 'Gather unit test results' | tee -a "${logMainFile}"
     printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
 
-    for index in {1..3}; do
+    for index in {1..4}; do
         if [[ "$index" -eq 1 ]]; then
             testType="${testTypeSqlclDirect}"
             testResultFile="${directTestResultFile}"
@@ -696,8 +732,11 @@ EOF
             testType="${testTypeSqlclWrapped}"
             testResultFile="${wrappedTestResultFile}"
         elif [[ "$index" -eq 3 ]]; then
-            testType="${testTypeSqlclLiquibase}"
-            testResultFile="${liquibaseTestResultFile}"
+            testType="${testTypeSqlclLiquibaseSearchPath}"
+            testResultFile="${liquibaseSearchPathTestResultFile}"
+        elif [[ "$index" -eq 4 ]]; then
+            testType="${testTypeSqlclLiquibaseCurrentDirectory}"
+            testResultFile="${liquibaseCurrentDirectoryTestResultFile}"
         fi
 
         while IFS= read -r readLine; do

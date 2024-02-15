@@ -15,39 +15,70 @@
         <sqlCheck expectedResult="0">
             select count(1)
             from all_users
-            where username = 'FOOBAR';
+            where username = 'SQLCL_UT_ALTER_CURRENT_USER';
         </sqlCheck>
     </preConditions>
     <sql>
-        create user foobar no authentication;
-        grant connect to foobar;
-        grant create session to foobar;
+        create user sqlcl_ut_alter_current_user no authentication;
+        grant connect to sqlcl_ut_alter_current_user;
+        grant create session to sqlcl_ut_alter_current_user;
     </sql>
     </changeSet>
 
     <changeSet
-        id="set_current_schema_to_foobar"
+        id="set_current_schema_to_sqlcl_ut_alter_current_user"
         author="jlyle"
         runOnChange="true"
         runAlways="true"
     >
+        <sql endDelimiter="/">
+            begin
+                for rec in (
+                    select *
+                    from all_views
+                    where owner = 'SQLCL_UT_ALTER_CURRENT_USER'
+                    and view_name = 'SQLCL_UT_ALTER_CURRENT_USER_VW'
+                )
+                loop
+                    execute immediate 'drop view ' || rec.owner || '.' || rec.view_name;
+                end loop;
+            end;
+        </sql>
         <sql>
-            alter session set current_schema = foobar;
+            alter session set current_schema = sqlcl_ut_alter_current_user;
         </sql>
         <rollback></rollback>
     </changeSet>
 
     <changeSet
-        id="dummy_changeset"
+        id="create_and_check_view_owner"
         author="jlyle"
         runOnChange="true"
         runAlways="true"
     >
-        <output>Test</output>
+        <sql>
+            create view sqlcl_ut_alter_current_user_vw as select 1 jml_one from sys.dual;
+        </sql>
+        <sql endDelimiter="/">
+            declare
+                l_count number;
+            begin
+                select count(1)
+                into l_count
+                from all_views
+                where owner = 'SQLCL_UT_ALTER_CURRENT_USER'
+                and view_name = 'SQLCL_UT_ALTER_CURRENT_USER_VW';
+
+                if l_count = 0 then
+                    raise_application_error(-20001, 'View not created in sqlcl_ut_alter_current_user schema');
+                end if;
+            end;
+            /
+        </sql>
     </changeSet>
 
     <changeSet
-        id="set_current_schema_to_session_user"
+        id="set_current_schema_to_session_user_drop_schema"
         author="jlyle"
         runOnChange="true"
         runAlways="true"
@@ -58,6 +89,7 @@
             end;
             /
         </sql>
+        <sql>drop user sqlcl_ut_alter_current_user cascade;</sql>
         <rollback></rollback>
     </changeSet>
 </databaseChangeLog>
