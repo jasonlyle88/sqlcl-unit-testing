@@ -39,6 +39,7 @@ function main() {
         printf -- '                         If not provided, the user will be prompted for\n'
         printf -- '                         a password.\n'
         printf -- '* -c {connection}    --  The connect identifier used to connect to the database.\n'
+        printf -- '  -C {wallet}        --  The cloud wallet used to connect to the database.\n'
         printf -- '  -d {directory}     --  The directory containing SQLcl (direct) tests to run.\n'
         printf -- '                         If not provided, will default to "sqlcl_direct_unit_tests"\n'
         printf -- '                         directory in the same directory as this script.\n'
@@ -162,7 +163,6 @@ function main() {
         local testResultCode
         local resultFile
         local logFile
-        local count
         local wrapperFile
         local databaseChangelogTableName
 
@@ -184,14 +184,15 @@ function main() {
             mkdir -p "$(dirname "${logFile}")"
             touch "${logFile}"
 
-            "${sqlclBinary}" -L -noupdates "${sqlclConnectStringWithoutPassword}" 1>"${logFile}" 2>&1 <<- EOF
-${databasePassword}
-whenever sqlerror exit failure
-set serveroutput on size unlimited
-set verify on
-set echo on
-@ "${testFile}" "${testDirectory}"
-EOF
+            "${sqlclBinary}" -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithoutPassword}" 1>"${logFile}" 2>&1 <<- EOF
+				${databasePassword}
+				whenever sqlerror exit failure
+				set serveroutput on size unlimited
+				set verify on
+				set echo on
+				show connection
+				@ "${testFile}" "${testDirectory}"
+				EOF
             testResultCode=$?
 
         elif [[ "${testType}" = "${testTypeSqlclWrapped}" ]]; then
@@ -203,11 +204,12 @@ EOF
             touch "${logFile}"
 
             {
-                printf -- 'connect %s\n' "${sqlclConnectStringWithPassword}"
                 printf -- 'whenever sqlerror exit failure\n'
+                printf -- 'connect %s %s\n' "${sqlclCloudConfigParameter[*]}" "${sqlclConnectStringWithPassword}"
                 printf -- 'set serveroutput on size unlimited\n'
                 printf -- 'set verify on\n'
                 printf -- 'set echo on\n'
+                printf -- 'show connection\n'
                 printf -- '@ "%s" "%s"' "${testFile}" "${testDirectory}"
             } > "${wrapperFile}"
 
@@ -217,7 +219,7 @@ EOF
             rm "${wrapperFile}"
         elif [[ "${testType}" = "${testTypeSqlclLiquibaseCurrentDirectory}" ]]; then
             resultFile="${liquibaseCurrentDirectoryTestResultFile}"
-            logFile="${logDirectory}/liquibase/${testName}.log"
+            logFile="${logDirectory}/liquibase-current-directory/${testName}.log"
 
             # Make sure database changelog table name is unique
             databaseChangelogTableName="ut${RANDOM}$(date +%s)"
@@ -227,24 +229,25 @@ EOF
 
             cd "${testDirectory}" || return 1
 
-            "${sqlclBinary}" -L -noupdates "${sqlclConnectStringWithPassword}" 1>"${logFile}" 2>&1 <<- EOF
-whenever sqlerror exit failure
-set serveroutput on size unlimited
-set verify on
-set echo on
-liquibase update -contexts test_context -database-changelog-table-name ${databaseChangelogTableName} -changelog-file ${testFilename}
-EOF
+            "${sqlclBinary}" -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithPassword}" 1>"${logFile}" 2>&1 <<- EOF
+				whenever sqlerror exit failure
+				set serveroutput on size unlimited
+				set verify on
+				set echo on
+				show connection
+				liquibase update -contexts test_context -database-changelog-table-name ${databaseChangelogTableName} -changelog-file ${testFilename}
+				EOF
             testResultCode=$?
 
-            "${sqlclBinary}" -L -noupdates "${sqlclConnectStringWithPassword}" 1>/dev/null 2>&1 <<- EOF
-drop view ${databaseChangelogTableName}_DETAILS;
-drop table ${databaseChangelogTableName}_ACTIONS;
-drop table ${databaseChangelogTableName};
-drop table ${databaseChangelogTableName}LOCK;
-EOF
+            "${sqlclBinary}" -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithPassword}" 1>/dev/null 2>&1 <<- EOF
+				drop view ${databaseChangelogTableName}_DETAILS;
+				drop table ${databaseChangelogTableName}_ACTIONS;
+				drop table ${databaseChangelogTableName};
+				drop table ${databaseChangelogTableName}LOCK;
+				EOF
         elif [[ "${testType}" = "${testTypeSqlclLiquibaseSearchPath}" ]]; then
             resultFile="${liquibaseSearchPathTestResultFile}"
-            logFile="${logDirectory}/liquibase/${testName}.log"
+            logFile="${logDirectory}/liquibase-search-path/${testName}.log"
 
             # Make sure database changelog table name is unique
             databaseChangelogTableName="ut${RANDOM}$(date +%s)"
@@ -252,21 +255,22 @@ EOF
             mkdir -p "$(dirname "${logFile}")"
             touch "${logFile}"
 
-            "${sqlclBinary}" -L -noupdates "${sqlclConnectStringWithPassword}" 1>"${logFile}" 2>&1 <<- EOF
-whenever sqlerror exit failure
-set serveroutput on size unlimited
-set verify on
-set echo on
-liquibase update -contexts test_context -database-changelog-table-name ${databaseChangelogTableName} -search-path ${testDirectory} -changelog-file ${testFilename}
-EOF
+            "${sqlclBinary}" -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithPassword}" 1>"${logFile}" 2>&1 <<- EOF
+				whenever sqlerror exit failure
+				set serveroutput on size unlimited
+				set verify on
+				set echo on
+				show connection
+				liquibase update -contexts test_context -database-changelog-table-name ${databaseChangelogTableName} -search-path ${testDirectory} -changelog-file ${testFilename}
+				EOF
             testResultCode=$?
 
-            "${sqlclBinary}" -L -noupdates "${sqlclConnectStringWithPassword}" 1>/dev/null 2>&1 <<- EOF
-drop view ${databaseChangelogTableName}_DETAILS;
-drop table ${databaseChangelogTableName}_ACTIONS;
-drop table ${databaseChangelogTableName};
-drop table ${databaseChangelogTableName}LOCK;
-EOF
+            "${sqlclBinary}" -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithPassword}" 1>/dev/null 2>&1 <<- EOF
+				drop view ${databaseChangelogTableName}_DETAILS;
+				drop table ${databaseChangelogTableName}_ACTIONS;
+				drop table ${databaseChangelogTableName};
+				drop table ${databaseChangelogTableName}LOCK;
+				EOF
         fi
 
         printf -- '%s:%s\n' "${testName}" "${testResultCode}" >> "${resultFile}"
@@ -284,7 +288,7 @@ EOF
     local testTypeSqlclDirect='SQLcl (direct)'
     local testTypeSqlclWrapped='SQLcl (wrapped)'
     local testTypeSqlclLiquibaseCurrentDirectory='SQLcl Liquibase (current directory)'
-    local testTypeSqlclLiquibaseSearchPath='SQLcl Liquibase (-search-path)'
+    local testTypeSqlclLiquibaseSearchPath='SQLcl Liquibase (search-path)'
     local testSuccessText='Succeeded'
     local textFailedText='Failed'
     local testTypeSummaryHeader='Test Type'
@@ -313,6 +317,7 @@ EOF
     local uFlag='false'
     local pFlag='false'
     local cFlag='false'
+    local CFlag='false'
     local dFlag='false'
     local wFlag='false'
     local lFlag='false'
@@ -321,6 +326,7 @@ EOF
     local databaseUsername
     local databasePassword
     local databaseConnectIdentifier
+    local databaseCloudWallet
     local sqlclDirectTestsDirectory
     local sqlclWrappedTestsDirectory
     local liquibaseTestsDirectory
@@ -355,6 +361,7 @@ EOF
     local liquibaseSearchPathTestResultFile
     local logDirectory
     local logMainFile
+    local -a sqlclCloudConfigParameter
     local sqlclConnectStringWithoutPassword
     local sqlclConnectStringWithPassword
     local index
@@ -363,6 +370,7 @@ EOF
     local testFile
     local testExtension
     local testFilename
+    local testTypePrevious
     local testType
     local testName
     local testResultFile
@@ -400,7 +408,7 @@ EOF
     # Option parsing
     #
     ############################################################################
-    while getopts ':b:u:p:c:d:w:l:h' opt
+    while getopts ':b:u:p:c:C:d:w:l:h' opt
     do
 
         case "${opt}" in
@@ -419,6 +427,10 @@ EOF
         'c')
             cFlag='true'
             databaseConnectIdentifier="${OPTARG}"
+            ;;
+        'C')
+            CFlag='true'
+            databaseCloudWallet="${OPTARG}"
             ;;
         'd')
             dFlag='true'
@@ -530,12 +542,22 @@ EOF
         return 16
     fi
 
+    if [[ "${CFlag}" == 'true' ]] && [[ ! -f "${databaseCloudWallet}" ]]; then
+        printf -- 'ERROR: Cannot find specified cloud wallet: "%s"\n' "${databaseCloudWallet}" | tee -a "${logMainFile}" >&2
+        return 17
+    fi
+
     ##
     ## Manipulate parameters
     ##
     sqlclDirectTestsDirectory="$(getCanonicalPath "${sqlclDirectTestsDirectory}")"
     sqlclWrappedTestsDirectory="$(getCanonicalPath "${sqlclWrappedTestsDirectory}")"
     liquibaseTestsDirectory="$(getCanonicalPath "${liquibaseTestsDirectory}")"
+
+    sqlclCloudConfigParameter=()
+    if [[ "${CFlag}" == 'true' ]]; then
+        sqlclCloudConfigParameter=('-cloudconfig' "${databaseCloudWallet}")
+    fi
 
     printf -- '\n' | tee -a "${logMainFile}"
     printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
@@ -563,7 +585,11 @@ EOF
     sqlclConnectStringWithoutPassword="${databaseUsername}@'${databaseConnectIdentifier}'"
     sqlclConnectStringWithPassword="${databaseUsername}/${databasePassword}@'${databaseConnectIdentifier}'"
 
-    if ! "${sqlclBinary}" -S -L -noupdates "${sqlclConnectStringWithPassword}" 1>>"${logMainFile}" 2>&1 <<< 'exit'; then
+    if ! "${sqlclBinary}" -S -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithPassword}" 1>>"${logMainFile}" 2>&1 <<- EOF
+		show connection
+		exit
+		EOF
+    then
         printf -- 'ERROR: Could not connect to database\n' | tee -a "${logMainFile}" >&2
         return 25
     fi
@@ -586,11 +612,12 @@ EOF
 
     {
         printf -- 'whenever sqlerror exit failure\n'
+		printf -- 'show connection\n'
         printf -- 'exec raise_application_error(-20001, '\''Cause exit'\'')\n'
         printf -- 'exit'
     } > "${sqlWheneverErrorTest}"
 
-    if "${sqlclBinary}" -S -L -noupdates "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>>"${logMainFile}" 2>&1; then
+    if "${sqlclBinary}" -S -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>>"${logMainFile}" 2>&1; then
         printf -- 'ERROR: SQLcl not exiting appropriately on SQL error\n' | tee -a "${logMainFile}" >&2
         return 26
     fi
@@ -604,6 +631,7 @@ EOF
 
     {
         printf -- 'whenever sqlerror exit failure\n'
+		printf -- 'show connection\n'
         printf -- 'liquibase update -changelog-file %s\n' "$(basename "${liquibaseWehenverErrorTest}")"
         printf -- 'exit'
     } > "${sqlWheneverErrorTest}"
@@ -634,7 +662,7 @@ EOF
     } > "${liquibaseWehenverErrorTest}"
 
     cd "${workingDirectory}" || return 1
-    if "${sqlclBinary}" -S -L -noupdates "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>>"${logMainFile}" 2>&1; then
+    if "${sqlclBinary}" -S -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>>"${logMainFile}" 2>&1; then
         cd "${originalPWD}" || return 1
         printf -- 'ERROR: SQLcl not exiting appropriately on Liquibase error\n' | tee -a "${logMainFile}" >&2
         return 27
@@ -729,14 +757,14 @@ EOF
             testType="${testTypeSqlclDirect}"
             testResultFile="${directTestResultFile}"
         elif [[ "$index" -eq 2 ]]; then
-            testType="${testTypeSqlclWrapped}"
-            testResultFile="${wrappedTestResultFile}"
+            testType="${testTypeSqlclLiquibaseCurrentDirectory}"
+            testResultFile="${liquibaseCurrentDirectoryTestResultFile}"
         elif [[ "$index" -eq 3 ]]; then
             testType="${testTypeSqlclLiquibaseSearchPath}"
             testResultFile="${liquibaseSearchPathTestResultFile}"
         elif [[ "$index" -eq 4 ]]; then
-            testType="${testTypeSqlclLiquibaseCurrentDirectory}"
-            testResultFile="${liquibaseCurrentDirectoryTestResultFile}"
+            testType="${testTypeSqlclWrapped}"
+            testResultFile="${wrappedTestResultFile}"
         fi
 
         while IFS= read -r readLine; do
@@ -795,15 +823,19 @@ EOF
     overallTestResultCode=0
 
     # Print out the results table
-    printf -- '\n' | tee -a "${logMainFile}"
-    printf -- "%0.s-" $(seq 1 ${tableWidth}) | tee -a "${logMainFile}"
-    printf -- '\n' | tee -a "${logMainFile}"
-    printf -- \
-        "${tableFormat}" \
-        "${testTypeSummaryHeader}" \
-        "${testNameSummaryHeader}" \
-        "${testResultSummaryHeader}"  | tee -a "${logMainFile}"
-    printf -- "%0.s-" $(seq 1 ${tableWidth}) | tee -a "${logMainFile}"
+    function printResultsTableHeader() {
+        printf -- "%0.s-" $(seq 1 "${tableWidth}") | tee -a "${logMainFile}"
+        printf -- '\n' | tee -a "${logMainFile}"
+        # shellcheck disable=2059
+        printf -- \
+            "${tableFormat}" \
+            "${testTypeSummaryHeader}" \
+            "${testNameSummaryHeader}" \
+            "${testResultSummaryHeader}"  | tee -a "${logMainFile}"
+        printf -- "%0.s-" $(seq 1 "${tableWidth}") | tee -a "${logMainFile}"
+        printf -- '\n' | tee -a "${logMainFile}"
+    } # printResultsTableHeader
+
     printf -- '\n' | tee -a "${logMainFile}"
     for index in "${!testNames[@]}"; do
         testType="${testTypes[${index}]}"
@@ -812,15 +844,22 @@ EOF
         testResultPlainString="${testResultPlainStrings[${index}]}"
         testResultColorizedString="${testResultColorizedStrings[${index}]}"
 
+        if [[ "${testTypePrevious}" != "${testType}" ]]; then
+            testTypePrevious="${testType}"
+            printResultsTableHeader
+        fi
+
         if [[ "${testResultCode}" -gt 0 ]]; then
             overallTestResultCode=1
         fi
 
+        # shellcheck disable=2059
         printf -- \
             "${tableFormat}" \
             "${testType}" \
             "${testName}" \
             "${testResultColorizedString}"
+        # shellcheck disable=2059
         printf -- \
             "${tableFormat}" \
             "${testType}" \
