@@ -184,7 +184,7 @@ function main() {
             mkdir -p "$(dirname "${logFile}")"
             touch "${logFile}"
 
-            "${sqlclBinary}" -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithoutPassword}" 1>"${logFile}" 2>&1 <<- EOF
+            "${sqlclBinary}" "${sqlParamsWithoutPassword[@]}" 1>"${logFile}" 2>&1 <<- EOF
 				${databasePassword}
 				whenever sqlerror exit failure
 				set serveroutput on size unlimited
@@ -205,7 +205,7 @@ function main() {
 
             {
                 printf -- 'whenever sqlerror exit failure\n'
-                printf -- 'connect %s %s\n' "${sqlclCloudConfigParameter[*]}" "${sqlclConnectStringWithPassword}"
+                printf -- 'connect %s\n' "${sqlParamsWithPassword[*]}"
                 printf -- 'set serveroutput on size unlimited\n'
                 printf -- 'set verify on\n'
                 printf -- 'set echo on\n'
@@ -229,7 +229,7 @@ function main() {
 
             cd "${testDirectory}" || return 1
 
-            "${sqlclBinary}" -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithPassword}" 1>"${logFile}" 2>&1 <<- EOF
+            "${sqlclBinary}" "${sqlParamsWithPassword[@]}" 1>"${logFile}" 2>&1 <<- EOF
 				whenever sqlerror exit failure
 				set serveroutput on size unlimited
 				set verify on
@@ -239,7 +239,7 @@ function main() {
 				EOF
             testResultCode=$?
 
-            "${sqlclBinary}" -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithPassword}" 1>/dev/null 2>&1 <<- EOF
+            "${sqlclBinary}" "${sqlParamsWithPassword[@]}" 1>/dev/null 2>&1 <<- EOF
 				drop view ${databaseChangelogTableName}_DETAILS;
 				drop table ${databaseChangelogTableName}_ACTIONS;
 				drop table ${databaseChangelogTableName};
@@ -255,7 +255,7 @@ function main() {
             mkdir -p "$(dirname "${logFile}")"
             touch "${logFile}"
 
-            "${sqlclBinary}" -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithPassword}" 1>"${logFile}" 2>&1 <<- EOF
+            "${sqlclBinary}" "${sqlParamsWithPassword[@]}" 1>"${logFile}" 2>&1 <<- EOF
 				whenever sqlerror exit failure
 				set serveroutput on size unlimited
 				set verify on
@@ -265,7 +265,7 @@ function main() {
 				EOF
             testResultCode=$?
 
-            "${sqlclBinary}" -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithPassword}" 1>/dev/null 2>&1 <<- EOF
+            "${sqlclBinary}" "${sqlParamsWithPassword[@]}" 1>/dev/null 2>&1 <<- EOF
 				drop view ${databaseChangelogTableName}_DETAILS;
 				drop table ${databaseChangelogTableName}_ACTIONS;
 				drop table ${databaseChangelogTableName};
@@ -361,9 +361,8 @@ function main() {
     local liquibaseSearchPathTestResultFile
     local logDirectory
     local logMainFile
-    local -a sqlclCloudConfigParameter
-    local sqlclConnectStringWithoutPassword
-    local sqlclConnectStringWithPassword
+    local -a sqlParamsWithPassword
+    local -a sqlParamsWithoutPassword
     local index
     local headerText
     local testsDirectory
@@ -554,9 +553,10 @@ function main() {
     sqlclWrappedTestsDirectory="$(getCanonicalPath "${sqlclWrappedTestsDirectory}")"
     liquibaseTestsDirectory="$(getCanonicalPath "${liquibaseTestsDirectory}")"
 
-    sqlclCloudConfigParameter=()
+    sqlParamsWithoutPassword=('-S' '-L' '-noupdates')
+
     if [[ "${CFlag}" == 'true' ]]; then
-        sqlclCloudConfigParameter=('-cloudconfig' "${databaseCloudWallet}")
+        sqlParamsWithoutPassword+=('-cloudconfig' "${databaseCloudWallet}")
     fi
 
     printf -- '\n' | tee -a "${logMainFile}"
@@ -582,10 +582,10 @@ function main() {
         printf -- '\n' | tee -a "${logMainFile}"
     fi
 
-    sqlclConnectStringWithoutPassword="${databaseUsername}@'${databaseConnectIdentifier}'"
-    sqlclConnectStringWithPassword="${databaseUsername}/${databasePassword}@'${databaseConnectIdentifier}'"
+    sqlParamsWithoutPassword+=("-user" "${databaseUsername}" "-url" "${databaseConnectIdentifier}")
+    sqlParamsWithPassword+=("${sqlParamsWithoutPassword[@]}" "-password" "${databasePassword}")
 
-    if ! "${sqlclBinary}" -S -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithPassword}" 1>>"${logMainFile}" 2>&1 <<- EOF
+    if ! "${sqlclBinary}" "${sqlParamsWithPassword[@]}" 1>>"${logMainFile}" 2>&1 <<- EOF
 		show connection
 		exit
 		EOF
@@ -617,7 +617,7 @@ function main() {
         printf -- 'exit'
     } > "${sqlWheneverErrorTest}"
 
-    if "${sqlclBinary}" -S -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>>"${logMainFile}" 2>&1; then
+    if "${sqlclBinary}" "${sqlParamsWithPassword[@]}" @"${sqlWheneverErrorTest}" 1>>"${logMainFile}" 2>&1; then
         printf -- 'ERROR: SQLcl not exiting appropriately on SQL error\n' | tee -a "${logMainFile}" >&2
         return 26
     fi
@@ -662,7 +662,7 @@ function main() {
     } > "${liquibaseWehenverErrorTest}"
 
     cd "${workingDirectory}" || return 1
-    if "${sqlclBinary}" -S -L -noupdates "${sqlclCloudConfigParameter[@]}" "${sqlclConnectStringWithPassword}" @"${sqlWheneverErrorTest}" 1>>"${logMainFile}" 2>&1; then
+    if "${sqlclBinary}" "${sqlParamsWithPassword[@]}" @"${sqlWheneverErrorTest}" 1>>"${logMainFile}" 2>&1; then
         cd "${originalPWD}" || return 1
         printf -- 'ERROR: SQLcl not exiting appropriately on Liquibase error\n' | tee -a "${logMainFile}" >&2
         return 27
