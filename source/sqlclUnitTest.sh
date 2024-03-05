@@ -184,7 +184,7 @@ function main() {
             mkdir -p "$(dirname "${logFile}")"
             touch "${logFile}"
 
-            "${sqlclBinary}" "${sqlParamsWithoutPassword[@]}" 1>"${logFile}" 2>&1 <<- EOF
+            "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithoutPassword[@]}" 1>"${logFile}" 2>&1 <<- EOF
 				${databasePassword}
 				whenever sqlerror exit failure
 				set serveroutput on size unlimited
@@ -229,7 +229,7 @@ function main() {
 
             cd "${testDirectory}" || return 1
 
-            "${sqlclBinary}" "${sqlParamsWithPassword[@]}" 1>"${logFile}" 2>&1 <<- EOF
+            "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>"${logFile}" 2>&1 <<- EOF
 				whenever sqlerror exit failure
 				set serveroutput on size unlimited
 				set verify on
@@ -239,7 +239,7 @@ function main() {
 				EOF
             testResultCode=$?
 
-            "${sqlclBinary}" "${sqlParamsWithPassword[@]}" 1>/dev/null 2>&1 <<- EOF
+            "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>/dev/null 2>&1 <<- EOF
 				drop view ${databaseChangelogTableName}_DETAILS;
 				drop table ${databaseChangelogTableName}_ACTIONS;
 				drop table ${databaseChangelogTableName};
@@ -255,7 +255,7 @@ function main() {
             mkdir -p "$(dirname "${logFile}")"
             touch "${logFile}"
 
-            "${sqlclBinary}" "${sqlParamsWithPassword[@]}" 1>"${logFile}" 2>&1 <<- EOF
+            "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>"${logFile}" 2>&1 <<- EOF
 				whenever sqlerror exit failure
 				set serveroutput on size unlimited
 				set verify on
@@ -265,7 +265,7 @@ function main() {
 				EOF
             testResultCode=$?
 
-            "${sqlclBinary}" "${sqlParamsWithPassword[@]}" 1>/dev/null 2>&1 <<- EOF
+            "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>/dev/null 2>&1 <<- EOF
 				drop view ${databaseChangelogTableName}_DETAILS;
 				drop table ${databaseChangelogTableName}_ACTIONS;
 				drop table ${databaseChangelogTableName};
@@ -361,6 +361,7 @@ function main() {
     local liquibaseSearchPathTestResultFile
     local logDirectory
     local logMainFile
+    local -a sqlParamsDirectConnect=('-S' '-L' '-noupdates')
     local -a sqlParamsWithPassword
     local -a sqlParamsWithoutPassword
     local index
@@ -553,8 +554,7 @@ function main() {
     sqlclWrappedTestsDirectory="$(getCanonicalPath "${sqlclWrappedTestsDirectory}")"
     liquibaseTestsDirectory="$(getCanonicalPath "${liquibaseTestsDirectory}")"
 
-    sqlParamsWithoutPassword=('-S' '-L' '-noupdates')
-
+    sqlParamsWithoutPassword=()
     if [[ "${CFlag}" == 'true' ]]; then
         sqlParamsWithoutPassword+=('-cloudconfig' "${databaseCloudWallet}")
     fi
@@ -585,7 +585,7 @@ function main() {
     sqlParamsWithoutPassword+=("-user" "${databaseUsername}" "-url" "${databaseConnectIdentifier}")
     sqlParamsWithPassword+=("${sqlParamsWithoutPassword[@]}" "-password" "${databasePassword}")
 
-    if ! "${sqlclBinary}" "${sqlParamsWithPassword[@]}" 1>>"${logMainFile}" 2>&1 <<- EOF
+    if ! "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>>"${logMainFile}" 2>&1 <<- EOF
 		show connection
 		exit
 		EOF
@@ -617,7 +617,7 @@ function main() {
         printf -- 'exit'
     } > "${sqlWheneverErrorTest}"
 
-    if "${sqlclBinary}" "${sqlParamsWithPassword[@]}" @"${sqlWheneverErrorTest}" 1>>"${logMainFile}" 2>&1; then
+    if "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" @"${sqlWheneverErrorTest}" 1>>"${logMainFile}" 2>&1; then
         printf -- 'ERROR: SQLcl not exiting appropriately on SQL error\n' | tee -a "${logMainFile}" >&2
         return 26
     fi
@@ -662,7 +662,7 @@ function main() {
     } > "${liquibaseWehenverErrorTest}"
 
     cd "${workingDirectory}" || return 1
-    if "${sqlclBinary}" "${sqlParamsWithPassword[@]}" @"${sqlWheneverErrorTest}" 1>>"${logMainFile}" 2>&1; then
+    if "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" @"${sqlWheneverErrorTest}" 1>>"${logMainFile}" 2>&1; then
         cd "${originalPWD}" || return 1
         printf -- 'ERROR: SQLcl not exiting appropriately on Liquibase error\n' | tee -a "${logMainFile}" >&2
         return 27
