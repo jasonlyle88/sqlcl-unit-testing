@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ora="http://www.oracle.com/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.17.xsd"
+>
+    <changeSet
+        author="jlyle"
+        id="test1"
+        runOnChange="true"
+        runAlways="true"
+    >
+        <sql>select 1 from sys.dual;</sql>
+    </changeSet>
+
+    <!-- Identical changeset identifier needed to test defaults file -->
+    <changeSet
+        author="jlyle"
+        id="test1"
+        runOnChange="true"
+        runAlways="true"
+    >
+        <sql>select 1 from sys.dual;</sql>
+    </changeSet>
+</databaseChangeLog>
