@@ -1,4 +1,4 @@
-liquibase update -search-path &1/sqlcl-liquibase-do-not-prompt-password -changelog-file changelog.xml
+liquibase update -database-changelog-table-name &1._changelog -search-path &2/sqlcl-liquibase-do-not-prompt-password -changelog-file changelog.xml
 
 select 'test'
 from sys.dual;
