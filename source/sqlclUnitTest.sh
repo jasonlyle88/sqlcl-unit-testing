@@ -250,13 +250,6 @@ function main() {
 				liquibase update -contexts test_context -database-changelog-table-name ${databaseChangelogTableName} -changelog-file ${testFilename}
 				EOF
             testResultCode=$?
-
-            # "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>/dev/null 2>&1 <<- EOF
-			# 	drop view ${databaseChangelogTableName}_DETAILS;
-			# 	drop table ${databaseChangelogTableName}_ACTIONS;
-			# 	drop table ${databaseChangelogTableName};
-			# 	drop table ${databaseChangelogTableName}LOCK;
-			# 	EOF
         elif [[ "${testType}" = "${testTypeSqlclLiquibaseSearchPath}" ]]; then
             resultFile="${liquibaseSearchPathTestResultFile}"
             logFile="${logDirectory}/liquibase-search-path/${testName}.log"
@@ -275,13 +268,6 @@ function main() {
 				liquibase update -contexts test_context -database-changelog-table-name ${databaseChangelogTableName} -search-path ${testDirectory} -changelog-file ${testFilename}
 				EOF
             testResultCode=$?
-
-            # "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>/dev/null 2>&1 <<- EOF
-			# 	drop view ${databaseChangelogTableName}_DETAILS;
-			# 	drop table ${databaseChangelogTableName}_ACTIONS;
-			# 	drop table ${databaseChangelogTableName};
-			# 	drop table ${databaseChangelogTableName}LOCK;
-			# 	EOF
         fi
 
         printf -- '%s:%s\n' "${testName}" "${testResultCode}" >> "${resultFile}"
