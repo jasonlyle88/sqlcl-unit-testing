@@ -1,1 +1,1 @@
-liquibase update -search-path / -defaults-file &1/sqlcl-liquibase-defaults-file-respected/liquibase.properties -changelog-file &1/sqlcl-liquibase-defaults-file-respected/changelog.xml
+liquibase update -database-changelog-table-name &1._changelog -search-path / -defaults-file &2/sqlcl-liquibase-defaults-file-respected/liquibase.properties -changelog-file &2/sqlcl-liquibase-defaults-file-respected/changelog.xml
