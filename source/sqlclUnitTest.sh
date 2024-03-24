@@ -49,6 +49,11 @@ function main() {
         printf -- '  -l {directory}     --  The directory containing SQLcl Liquibase tests to run.\n'
         printf -- '                         If not provided, will default to "lb_unit_tests"\n'
         printf -- '                         directory in the same directory as this script.\n'
+        printf -- '  -P {type}          --  The parallelization type to use for this execution.\n'
+        printf -- '                         Accepts one of the following types:\n'
+        printf -- '                             NONE - Execute all tests serially\n'
+        printf -- '                             TYPE - Execute all tests for a each test type in parallel (default)\n'
+        printf -- '                             TEST - Execute all tests in parallel\n'
         printf -- '  -h                 --  Show this help.\n'
         printf -- '\n'
         printf -- 'Example:\n'
@@ -157,6 +162,11 @@ function main() {
         local testType="$1"
         local testFile="$2"
 
+        local functionPid
+        #shellcheck disable=2016
+        functionPid="$($SHELL -c 'echo $PPID')"
+        local functionUniqueIdentifier="${scriptUniqueIdentifier}_${functionPid}"
+        local databaseChangelogTableName="${functionUniqueIdentifier}_changelog"
         local testDirectory
         local testFilename
         local testName
@@ -164,7 +174,6 @@ function main() {
         local resultFile
         local logFile
         local wrapperFile
-        local databaseChangelogTableName
 
         testDirectory="$(dirname "${testFile}")"
         testFilename="$(basename "${testFile}")"
@@ -184,14 +193,16 @@ function main() {
             mkdir -p "$(dirname "${logFile}")"
             touch "${logFile}"
 
-            "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithoutPassword[@]}" 1>"${logFile}" 2>&1 <<- EOF
+            printf -- 'Execution unique Identifier: "%s"\n\n' "${functionUniqueIdentifier}" 1>>"${logFile}"
+
+            "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithoutPassword[@]}" 1>>"${logFile}" 2>&1 <<- EOF
 				${databasePassword}
 				whenever sqlerror exit failure
 				set serveroutput on size unlimited
 				set verify on
 				set echo on
 				show connection
-				@ "${testFile}" "${testDirectory}"
+				@ "${testFile}" "${functionUniqueIdentifier}" "${testDirectory}"
 				EOF
             testResultCode=$?
 
@@ -203,6 +214,8 @@ function main() {
             mkdir -p "$(dirname "${logFile}")"
             touch "${logFile}"
 
+            printf -- 'Execution unique Identifier: "%s"\n\n' "${functionUniqueIdentifier}" 1>>"${logFile}"
+
             {
                 printf -- 'whenever sqlerror exit failure\n'
                 printf -- 'connect %s\n' "${sqlParamsWithPassword[*]}"
@@ -210,10 +223,10 @@ function main() {
                 printf -- 'set verify on\n'
                 printf -- 'set echo on\n'
                 printf -- 'show connection\n'
-                printf -- '@ "%s" "%s"' "${testFile}" "${testDirectory}"
+                printf -- '@ "%s" "%s" "%s"' "${testFile}" "${functionUniqueIdentifier}" "${testDirectory}"
             } > "${wrapperFile}"
 
-            "${sqlclBinary}" -noupdates /nolog "@${wrapperFile}" 1>"${logFile}" 2>&1
+            "${sqlclBinary}" -noupdates /nolog "@${wrapperFile}" 1>>"${logFile}" 2>&1
             testResultCode=$?
 
             rm "${wrapperFile}"
@@ -221,15 +234,14 @@ function main() {
             resultFile="${liquibaseCurrentDirectoryTestResultFile}"
             logFile="${logDirectory}/liquibase-current-directory/${testName}.log"
 
-            # Make sure database changelog table name is unique
-            databaseChangelogTableName="ut${RANDOM}$(date +%s)"
-
             mkdir -p "$(dirname "${logFile}")"
             touch "${logFile}"
 
+            printf -- 'Execution unique Identifier: "%s"\n\n' "${functionUniqueIdentifier}" 1>>"${logFile}"
+
             cd "${testDirectory}" || return 1
 
-            "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>"${logFile}" 2>&1 <<- EOF
+            "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>>"${logFile}" 2>&1 <<- EOF
 				whenever sqlerror exit failure
 				set serveroutput on size unlimited
 				set verify on
@@ -239,23 +251,22 @@ function main() {
 				EOF
             testResultCode=$?
 
-            "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>/dev/null 2>&1 <<- EOF
-				drop view ${databaseChangelogTableName}_DETAILS;
-				drop table ${databaseChangelogTableName}_ACTIONS;
-				drop table ${databaseChangelogTableName};
-				drop table ${databaseChangelogTableName}LOCK;
-				EOF
+            # "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>/dev/null 2>&1 <<- EOF
+			# 	drop view ${databaseChangelogTableName}_DETAILS;
+			# 	drop table ${databaseChangelogTableName}_ACTIONS;
+			# 	drop table ${databaseChangelogTableName};
+			# 	drop table ${databaseChangelogTableName}LOCK;
+			# 	EOF
         elif [[ "${testType}" = "${testTypeSqlclLiquibaseSearchPath}" ]]; then
             resultFile="${liquibaseSearchPathTestResultFile}"
             logFile="${logDirectory}/liquibase-search-path/${testName}.log"
 
-            # Make sure database changelog table name is unique
-            databaseChangelogTableName="ut${RANDOM}$(date +%s)"
-
             mkdir -p "$(dirname "${logFile}")"
             touch "${logFile}"
 
-            "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>"${logFile}" 2>&1 <<- EOF
+            printf -- 'Execution unique Identifier: "%s"\n\n' "${functionUniqueIdentifier}" 1>>"${logFile}"
+
+            "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>>"${logFile}" 2>&1 <<- EOF
 				whenever sqlerror exit failure
 				set serveroutput on size unlimited
 				set verify on
@@ -265,12 +276,12 @@ function main() {
 				EOF
             testResultCode=$?
 
-            "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>/dev/null 2>&1 <<- EOF
-				drop view ${databaseChangelogTableName}_DETAILS;
-				drop table ${databaseChangelogTableName}_ACTIONS;
-				drop table ${databaseChangelogTableName};
-				drop table ${databaseChangelogTableName}LOCK;
-				EOF
+            # "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>/dev/null 2>&1 <<- EOF
+			# 	drop view ${databaseChangelogTableName}_DETAILS;
+			# 	drop table ${databaseChangelogTableName}_ACTIONS;
+			# 	drop table ${databaseChangelogTableName};
+			# 	drop table ${databaseChangelogTableName}LOCK;
+			# 	EOF
         fi
 
         printf -- '%s:%s\n' "${testName}" "${testResultCode}" >> "${resultFile}"
@@ -321,6 +332,7 @@ function main() {
     local dFlag='false'
     local wFlag='false'
     local lFlag='false'
+    local PFlag='false'
 
     local sqlclBinary
     local databaseUsername
@@ -330,6 +342,7 @@ function main() {
     local sqlclDirectTestsDirectory
     local sqlclWrappedTestsDirectory
     local liquibaseTestsDirectory
+    local parallelizationType
 
     ############################################################################
     ##  Constants
@@ -348,6 +361,10 @@ function main() {
     local originalPWD="${PWD}"
     # shellcheck disable=SC2034
     local originalIFS="${IFS}"
+    # shellcheck disable=SC2034
+    local scriptPid="${$}"
+    # shellcheck disable=SC2034
+    local scriptUniqueIdentifier="sqlcl_ut_${scriptPid}"
 
     ############################################################################
     ##  Procedural variables
@@ -408,7 +425,7 @@ function main() {
     # Option parsing
     #
     ############################################################################
-    while getopts ':b:u:p:c:C:d:w:l:h' opt
+    while getopts ':b:u:p:c:C:d:w:l:P:h' opt
     do
 
         case "${opt}" in
@@ -443,6 +460,10 @@ function main() {
         'l')
             lFlag='true'
             liquibaseTestsDirectory="${OPTARG}"
+            ;;
+        'P')
+            PFlag='true'
+            parallelizationType="$(toUpperCase "${OPTARG}")"
             ;;
         'h')
             usage
@@ -485,6 +506,10 @@ function main() {
 
     if [[ "${lFlag}" != 'true' ]]; then
         liquibaseTestsDirectory="${scriptPath}/lb_unit_tests"
+    fi
+
+    if [[ "${PFlag}" != 'true' ]]; then
+        parallelizationType="TYPE"
     fi
 
     ############################################################################
@@ -547,12 +572,25 @@ function main() {
         return 17
     fi
 
+    if [[ "${parallelizationType}" != 'NONE' ]] && [[ "${parallelizationType}" != 'TYPE' ]] && [[ "${parallelizationType}" != 'TEST' ]]; then
+        printf -- 'ERROR: Invalid parallelization type (-P): "%s"\n' "${parallelizationType}" | tee -a "${logMainFile}" >&2
+        return 18
+    fi
+
     ##
     ## Manipulate parameters
     ##
     sqlclDirectTestsDirectory="$(getCanonicalPath "${sqlclDirectTestsDirectory}")"
     sqlclWrappedTestsDirectory="$(getCanonicalPath "${sqlclWrappedTestsDirectory}")"
     liquibaseTestsDirectory="$(getCanonicalPath "${liquibaseTestsDirectory}")"
+
+    if [[ "${bFlag}" == 'true' ]]; then
+        sqlclBinary="$(getCanonicalPath "${sqlclBinary}")"
+    fi
+
+    if [[ "${CFlag}" == 'true' ]]; then
+        databaseCloudWallet="$(getCanonicalPath "${databaseCloudWallet}")"
+    fi
 
     sqlParamsWithoutPassword=()
     if [[ "${CFlag}" == 'true' ]]; then
@@ -632,7 +670,7 @@ function main() {
     {
         printf -- 'whenever sqlerror exit failure\n'
 		printf -- 'show connection\n'
-        printf -- 'liquibase update -changelog-file %s\n' "$(basename "${liquibaseWehenverErrorTest}")"
+        printf -- 'liquibase update -database-changelog-table-name %s -changelog-file %s\n' "${scriptUniqueIdentifier}_changelog" "$(basename "${liquibaseWehenverErrorTest}")"
         printf -- 'exit'
     } > "${sqlWheneverErrorTest}"
 
@@ -725,23 +763,77 @@ function main() {
 
             executeUnitTest "${testType}" "${testFile}" &
 
-            sleep 1
-        done < <( find "${testsDirectory}" -type 'f' -iname "${testExtension}" -mindepth '1' -maxdepth '1' | sort )
+            # Wait for test to finish if no parallel execution was requested
+            if [[ "${parallelizationType}" == 'NONE' ]]; then
+                wait
+            fi
+        done < <( find "${testsDirectory}" -mindepth '1' -maxdepth '1' -type 'f' -iname "${testExtension}" | sort )
+
+        ##
+        ## Wait for unit test execution to finish if TYPE parallelization type was requested
+        ##
+        if [[ "${parallelizationType}" == 'TYPE' ]]; then
+            printf -- '\n' | tee -a "${logMainFile}"
+            printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+            printf -- '%s %s\n' "${hs}" 'Wait for unit test execution to finish' | tee -a "${logMainFile}"
+            printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+
+            wait
+
+            printf -- 'Unit tests finished running.\n' | tee -a "${logMainFile}"
+        fi
+
     done
 
     ##
-    ## Wait for unit test execution to finish
+    ## Wait for unit test execution to finish if TEST parallelization type was requested
+    ##
+    if [[ "${parallelizationType}" == 'TEST' ]]; then
+        printf -- '\n' | tee -a "${logMainFile}"
+        printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+        printf -- '%s %s\n' "${hs}" 'Wait for unit test execution to finish' | tee -a "${logMainFile}"
+        printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+
+        wait
+
+        printf -- 'Unit tests finished running.\n' | tee -a "${logMainFile}"
+    fi
+
+    ##
+    ## Cleanup testing objects in database
     ##
 
     printf -- '\n' | tee -a "${logMainFile}"
     printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
-    printf -- '%s %s\n' "${hs}" 'Wait for unit test execution to finish' | tee -a "${logMainFile}"
+    printf -- '%s %s\n' "${hs}" 'Cleanup unit test database objects' | tee -a "${logMainFile}"
     printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
 
-    # Wait for all background executions of unit tests to complete
-    wait
+    "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>>"${logMainFile}" 2>&1 <<- EOF
+		declare
+			c_unique_identifier constant    varchar2(255 char)  := upper('${scriptUniqueIdentifier}');
+		begin
+			for obj in (
+				select table_name
+				from user_tables
+				where table_name like c_unique_identifier || '%'
+			)
+			loop
+				execute immediate 'drop table ' || obj.table_name || ' cascade constraints purge';
+			end loop;
 
-    printf -- 'Unit tests finished running.\n' | tee -a "${logMainFile}"
+			for obj in (
+				select view_name
+				from user_views
+				where view_name like c_unique_identifier || '%'
+			)
+			loop
+				execute immediate 'drop view ' || obj.view_name;
+			end loop;
+		end;
+		/
+		EOF
+
+    printf -- 'Completed.\n' | tee -a "${logMainFile}"
 
     ##
     ## Gather unit test results
