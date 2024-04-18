@@ -6,27 +6,11 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.17.xsd"
 >
     <changeSet
-        id="test_1"
+        id="something"
         author="jlyle"
         runOnChange="true"
         runAlways="true"
-        context="foo"
     >
-        <sql endDelimiter="/">
-            begin
-                raise_application_error(-20001, 'SHOULD NOT HAVE RUN');
-            end;
-            /
-        </sql>
-    </changeSet>
-
-    <changeSet
-        id="test_2"
-        author="jlyle"
-        runOnChange="true"
-        runAlways="true"
-        context="runme"
-    >
-        <output>Should run</output>
+        <output>Run successfully!</output>
     </changeSet>
 </databaseChangeLog>
