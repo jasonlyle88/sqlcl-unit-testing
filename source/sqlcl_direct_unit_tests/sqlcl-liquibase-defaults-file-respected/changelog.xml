@@ -6,21 +6,27 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.17.xsd"
 >
     <changeSet
+        id="test_1"
         author="jlyle"
-        id="test1"
         runOnChange="true"
         runAlways="true"
+        context="foo"
     >
-        <sql>select 1 from sys.dual;</sql>
+        <sql endDelimiter="/">
+            begin
+                raise_application_error(-20001, 'SHOULD NOT HAVE RUN');
+            end;
+            /
+        </sql>
     </changeSet>
 
-    <!-- Identical changeset identifier needed to test defaults file -->
     <changeSet
+        id="test_2"
         author="jlyle"
-        id="test1"
         runOnChange="true"
         runAlways="true"
+        context="runme"
     >
-        <sql>select 1 from sys.dual;</sql>
+        <output>Should run</output>
     </changeSet>
 </databaseChangeLog>
