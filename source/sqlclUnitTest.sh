@@ -158,6 +158,23 @@ function main() {
         printf -- '%s' "${testResultString}"
     } # getTestResultColorizedString
 
+    function convertToWindowsPath() {
+        local originalUnixPath="$1"
+        local unixPath="${originalUnixPath}"
+        local windowsPath
+
+        # Convert drive letter
+        if [[ "${unixPath:0:1}" == '/' ]]; then
+            windowsPath="${unixPath:1:1}:\\"
+
+            unixPath="${unixPath:3}"
+        fi
+
+        windowsPath="${windowsPath}$(printf -- '%s' "${unixPath}" | sed 's|/|\\|g')"
+
+        printf -- '%s\n' "${windowsPath}"
+    } # convertToWindowsPath
+
     function executeUnitTest() {
         local testType="$1"
         local testFile="$2"
@@ -175,6 +192,9 @@ function main() {
         local logFile
         local wrapperFile
         local nologParam
+        local testFileOS
+        local testFilenameOS
+        local testDirectoryOS
 
         testDirectory="$(dirname "${testFile}")"
         testFilename="$(basename "${testFile}")"
@@ -182,6 +202,23 @@ function main() {
         testResultCode=-1
 
         cd "${testDirectory}" || return 1
+
+        # Determine cross-os specific variables needed for execute
+        if [[ "${OSTYPE}" == "cygwin" || "${OSTYPE}" == "msys" || "${OSTYPE}" == "win32" ]]; then
+            # Handle Windows systems
+            nologParam="//nolog"
+
+            testFileOS="$(convertToWindowsPath "${testFile}")"
+            testDirectoryOS="$(convertToWindowsPath "${testDirectory}")"
+            testFilenameOS="$(convertToWindowsPath "${testFilename}")"
+        else
+            # Handle linux/unix based systems
+            nologParam="/nolog"
+
+            testFileOS="${testFile}"
+            testDirectoryOS="${testDirectory}"
+            testFilenameOS="${testFilename}"
+        fi
 
         # Make sure SQLPATH is not set for SQLcl execution so no login.sql
         # script is runs
@@ -203,7 +240,7 @@ function main() {
 				set verify on
 				set echo on
 				show connection
-				@ "${testFile}" "${functionUniqueIdentifier}" "${testDirectory}"
+				@ "${testFileOS}" "${functionUniqueIdentifier}" "${testDirectoryOS}"
 				EOF
             testResultCode=$?
 
@@ -224,14 +261,8 @@ function main() {
                 printf -- 'set verify on\n'
                 printf -- 'set echo on\n'
                 printf -- 'show connection\n'
-                printf -- '@ "%s" "%s" "%s"' "${testFile}" "${functionUniqueIdentifier}" "${testDirectory}"
+                printf -- '@ "%s" "%s" "%s"' "${testFileOS}" "${functionUniqueIdentifier}" "${testDirectoryOS}"
             } > "${wrapperFile}"
-
-            if [[ "${OSTYPE}" == "cygwin" || "${OSTYPE}" == "msys" || "${OSTYPE}" == "win32" ]]; then
-                nologParam="//nolog"
-            else
-                nologParam="/nolog"
-            fi
 
             "${sqlclBinary}" -noupdates "${nologParam}" "@${wrapperFile}" 1>>"${logFile}" 2>&1
             testResultCode=$?
@@ -254,7 +285,7 @@ function main() {
 				set verify on
 				set echo on
 				show connection
-				liquibase update -contexts test_context -database-changelog-table-name ${databaseChangelogTableName} -changelog-file ${testFilename}
+				liquibase update -contexts test_context -database-changelog-table-name ${databaseChangelogTableName} -changelog-file ${testFilenameOS}
 				EOF
             testResultCode=$?
         elif [[ "${testType}" = "${testTypeSqlclLiquibaseSearchPath}" ]]; then
@@ -272,7 +303,7 @@ function main() {
 				set verify on
 				set echo on
 				show connection
-				liquibase update -contexts test_context -database-changelog-table-name ${databaseChangelogTableName} -search-path ${testDirectory} -changelog-file ${testFilename}
+				liquibase update -contexts test_context -database-changelog-table-name ${databaseChangelogTableName} -search-path ${testDirectoryOS} -changelog-file ${testFilenameOS}
 				EOF
             testResultCode=$?
         fi
@@ -613,8 +644,8 @@ function main() {
         printf -- '\n' | tee -a "${logMainFile}"
     fi
 
-    sqlParamsWithoutPassword+=("-user" "${databaseUsername}" "-url" "${databaseConnectIdentifier}")
-    sqlParamsWithPassword+=("${sqlParamsWithoutPassword[@]}" "-password" "${databasePassword}")
+    sqlParamsWithoutPassword+=("-user" "\"${databaseUsername}\"" "-url" "\"${databaseConnectIdentifier}\"")
+    sqlParamsWithPassword+=("${sqlParamsWithoutPassword[@]}" "-password" "\"${databasePassword}\"")
 
     if ! "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>>"${logMainFile}" 2>&1 <<- EOF
 		show connection
