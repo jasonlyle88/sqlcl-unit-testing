@@ -209,7 +209,7 @@ function main() {
         elif [[ "${testType}" = "${testTypeSqlclWrapped}" ]]; then
             resultFile="${wrappedTestResultFile}"
             logFile="${logDirectory}/wrapped/${testName}.log"
-            wrapperFile="${workingDirectory}/$(uuidgen).sql"
+            wrapperFile="${workingDirectory}/${functionUniqueIdentifier}-wrapper.sql"
 
             mkdir -p "$(dirname "${logFile}")"
             touch "${logFile}"
