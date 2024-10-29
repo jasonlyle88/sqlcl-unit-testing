@@ -174,6 +174,7 @@ function main() {
         local resultFile
         local logFile
         local wrapperFile
+        local nologParam
 
         testDirectory="$(dirname "${testFile}")"
         testFilename="$(basename "${testFile}")"
@@ -226,7 +227,13 @@ function main() {
                 printf -- '@ "%s" "%s" "%s"' "${testFile}" "${functionUniqueIdentifier}" "${testDirectory}"
             } > "${wrapperFile}"
 
-            "${sqlclBinary}" -noupdates /nolog "@${wrapperFile}" 1>>"${logFile}" 2>&1
+            if [[ "${OSTYPE}" == "cygwin" || "${OSTYPE}" == "msys" || "${OSTYPE}" == "win32" ]]; then
+                nologParam="//nolog"
+            else
+                nologParam="/nolog"
+            fi
+
+            "${sqlclBinary}" -noupdates "${nologParam}" "@${wrapperFile}" 1>>"${logFile}" 2>&1
             testResultCode=$?
 
             rm "${wrapperFile}"
