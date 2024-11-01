@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ora="http://www.oracle.com/xml/ns/dbchangelog-ext"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.17.xsd"
+>
+    <include relativeToChangelogFile="true" file="child.sql" />
+
+    <changeSet
+        author="jlyle"
+        id="sqlcl_liquibase_runoraclescript_change"
+        runOnChange="true"
+        runAlways="false"
+    >
+        <ora:runOracleScript ownerName="jlyle" sourceType="FILE" objectType="SCRIPT" objectName="demo" relativeToChangelogFile="true" >
+            <ora:source>
+                child.sql
+            </ora:source>
+        </ora:runOracleScript>
+    </changeSet>
+
+    <changeSet
+        author="jlyle"
+        id="sqlcl_liquibase_runapexscript_change"
+        runOnChange="true"
+        runAlways="false"
+    >
+        <ora:runApexScript ownerName="jlyle" sourceType="FILE" objectType="SCRIPT" objectName="demo" relativeToChangelogFile="true" >
+            <ora:source>
+                child.sql
+            </ora:source>
+        </ora:runApexScript>
+    </changeSet>
+</databaseChangeLog>
