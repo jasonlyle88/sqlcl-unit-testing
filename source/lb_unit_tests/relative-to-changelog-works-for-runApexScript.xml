@@ -8,6 +8,8 @@
     <changeSet
         id="relative-to-changelog-works-for-runApexScript"
         author="jlyle"
+        runOnChange="true"
+        runAlways="true"
     >
         <ora:runApexScript ownerName="jlyle" sourceType="FILE" objectType="SCRIPT" objectName="test_script" relativeToChangelogFile="true" >
             <ora:source>

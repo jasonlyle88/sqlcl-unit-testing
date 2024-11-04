@@ -8,6 +8,8 @@
     <changeSet
         id="relative-to-changelog-works-for-runOracleScript"
         author="jlyle"
+        runOnChange="true"
+        runAlways="true"
     >
         <ora:runOracleScript ownerName="jlyle" sourceType="FILE" objectType="SCRIPT" objectName="test_script" relativeToChangelogFile="true" >
             <ora:source>
