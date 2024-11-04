@@ -1,15 +1,3 @@
-begin
-    for x in (
-        select *
-        from user_tables
-        where table_name = 'DATABASECHANGELOG'
-    )
-    loop
-        execute immediate 'truncate table databasechangelog';
-    end loop;
-end;
-/
-
 liquibase update -database-changelog-table-name &1._changelog -search-path &2/sqlcl-liquibase-search-path -changelog-file changelog.xml
 
 declare
