@@ -6,7 +6,30 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.17.xsd"
 >
     <changeSet
-        id="relative-to-changelog-works-for-runOracleScript"
+        id="relative-to-changelog-works-for-runOracleScript-with-child-script-drop-table-setup"
+        author="jlyle"
+        runOnChange="true"
+        runAlways="true"
+    >
+        <preConditions onFail="CONTINUE">
+                <tableExists tableName="lb_ut_rtcwfroswcs"/>
+        </preConditions>
+        <dropTable tableName="lb_ut_rtcwfroswcs"/>
+    </changeSet>
+
+    <changeSet
+        id="relative-to-changelog-works-for-runOracleScript-with-child-script-create-table"
+        author="jlyle"
+        runOnChange="true"
+        runAlways="true"
+    >
+        <createTable tableName="lb_ut_rtcwfroswcs">
+            <column name="id" type="int"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet
+        id="relative-to-changelog-works-for-runOracleScript-with-child-script"
         author="jlyle"
         runOnChange="true"
         runAlways="true"
@@ -16,5 +39,39 @@
                 relative-to-changelog-works-for-runOracleScript-with-child-scripts/script.sql
             </ora:source>
         </ora:runOracleScript>
+    </changeSet>
+
+    <changeSet
+        id="relative-to-changelog-works-for-runOracleScript-with-child-script-verify"
+        author="jlyle"
+        runOnChange="true"
+        runAlways="true"
+    >
+        <sql endDelimiter="/">
+            declare
+                l_count number;
+            begin
+                select count(1)
+                into l_count
+                from lb_ut_rtcwfroswcs;
+
+                if l_count != 1 then
+                    raise_application_error(-20001, 'Failed');
+                end if;
+            end;
+            /
+        </sql>
+    </changeSet>
+
+    <changeSet
+        id="relative-to-changelog-works-for-runOracleScript-with-child-script-drop-table-cleanup"
+        author="jlyle"
+        runOnChange="true"
+        runAlways="true"
+    >
+        <preConditions onFail="CONTINUE">
+                <tableExists tableName="lb_ut_rtcwfroswcs"/>
+        </preConditions>
+        <dropTable tableName="lb_ut_rtcwfroswcs"/>
     </changeSet>
 </databaseChangeLog>
