@@ -167,6 +167,9 @@ function main() {
         if [[ "${unixPath:0:1}" == '/' ]]; then
             windowsPath="${unixPath:1:1}:\\"
 
+            # Ensure the drive letter is upper case
+            windowsPath="$(toUpperCase "${windowsPath}")"
+
             unixPath="${unixPath:3}"
         fi
 
