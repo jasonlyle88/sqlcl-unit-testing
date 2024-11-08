@@ -306,6 +306,7 @@ function main() {
 				set verify on
 				set echo on
 				show connection
+                prompt "Provided search path: '${testDirectoryOS}'"
 				liquibase update -contexts test_context -database-changelog-table-name ${databaseChangelogTableName} -search-path ${testDirectoryOS} -changelog-file ${testFilenameOS}
 				EOF
             testResultCode=$?
