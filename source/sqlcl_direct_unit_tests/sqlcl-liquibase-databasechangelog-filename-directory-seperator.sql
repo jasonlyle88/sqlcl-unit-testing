@@ -22,7 +22,7 @@ end;
 /
 
 -- Check filename directory separator directions
-prompt "Check changesets ran"
+prompt "Check databasechangelog.filename directory seperator characters"
 declare
     c_root          constant    varchar2(255 char)  :=  'sqlcl-liquibase-databasechangelog-filename-directory-seperator';
     c_table_name    constant    varchar2(255 char)  :=  '&1._changelog';

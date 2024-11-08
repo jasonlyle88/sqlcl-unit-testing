@@ -167,6 +167,9 @@ function main() {
         if [[ "${unixPath:0:1}" == '/' ]]; then
             windowsPath="${unixPath:1:1}:\\"
 
+            # Ensure the drive letter is upper case
+            windowsPath="$(toUpperCase "${windowsPath}")"
+
             unixPath="${unixPath:3}"
         fi
 
@@ -303,6 +306,7 @@ function main() {
 				set verify on
 				set echo on
 				show connection
+                prompt "Provided search path: '${testDirectoryOS}'"
 				liquibase update -contexts test_context -database-changelog-table-name ${databaseChangelogTableName} -search-path ${testDirectoryOS} -changelog-file ${testFilenameOS}
 				EOF
             testResultCode=$?

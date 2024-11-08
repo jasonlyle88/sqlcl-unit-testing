@@ -18,6 +18,8 @@
     <changeSet
         id="context-filtering-property"
         author="jlyle"
+        runOnChange="true"
+        runAlways="true"
     >
         <sql endDelimiter="/">
             begin
