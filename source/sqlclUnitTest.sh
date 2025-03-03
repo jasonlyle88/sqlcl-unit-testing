@@ -828,6 +828,19 @@ function main() {
     fi
 
     ##
+    ## Cleanup liquibase error log files
+    ##
+
+    printf -- '\n' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+    printf -- '%s %s\n' "${hs}" 'Cleanup liquibase error log files' | tee -a "${logMainFile}"
+    printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
+
+    find "${liquibaseTestsDirectory}" -iname 'sqlcl-lb-error*.log' -delete
+
+    printf -- 'Completed.\n' | tee -a "${logMainFile}"
+
+    ##
     ## Cleanup testing objects in database
     ##
 
@@ -836,7 +849,7 @@ function main() {
     printf -- '%s %s\n' "${hs}" 'Cleanup unit test database objects' | tee -a "${logMainFile}"
     printf -- '%s\n' "${h1}" | tee -a "${logMainFile}"
 
-    "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>>"${logMainFile}" 2>&1 <<- EOF
+    SQLPATH="" "${sqlclBinary}" "${sqlParamsDirectConnect[@]}" "${sqlParamsWithPassword[@]}" 1>>"${logMainFile}" 2>&1 <<- EOF
 		declare
 			c_unique_identifier constant    varchar2(255 char)  := upper('${scriptUniqueIdentifier}');
 		begin
